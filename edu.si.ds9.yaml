@@ -77,7 +77,7 @@ modules:
           '  <url type="homepage">https://ds9.si.edu/</url>' \
           '  <url type="bugtracker">https://github.com/SAOImageDS9/SAOImageDS9/issues</url>' \
           '  <content_rating type="oars-1.1"/>' \
-          '  <releases><release version="8.8b2" date="2026-08-01"/></releases>' \
+          '  <releases><release version="8.8b2" date="2026-08-06"/></releases>' \
           '</component>' \
           > "${FLATPAK_DEST}/share/metainfo/edu.si.ds9.metainfo.xml"
 
