@@ -1,0 +1,131 @@
+name: build-flatpak
+run-name: Build unsigned Flatpak repository
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    tags:
+      - "*"
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+          - arch: aarch64
+            runner: ubuntu-24.04-arm
+
+    steps:
+      - name: Checkout packaging files
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Install Flatpak tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes flatpak flatpak-builder ostree
+          flatpak remote-add --user --if-not-exists \
+            flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+
+      - name: Confirm native architecture
+        env:
+          EXPECTED_ARCH: ${{ matrix.arch }}
+        run: |
+          actual_arch=$(flatpak --default-arch)
+          test "${actual_arch}" = "${EXPECTED_ARCH}"
+
+      - name: Build unsigned repository
+        env:
+          TARGET_ARCH: ${{ matrix.arch }}
+        run: |
+          flatpak-builder \
+            --arch="${TARGET_ARCH}" \
+            --user \
+            --repo=repo \
+            --force-clean \
+            --install-deps-from=flathub \
+            "${RUNNER_TEMP}/build-dir-${TARGET_ARCH}" \
+            edu.si.ds9.yaml
+
+      - name: Inspect exported refs
+        run: ostree refs --repo=repo | sort
+
+      - name: Archive architecture repository
+        env:
+          TARGET_ARCH: ${{ matrix.arch }}
+        run: |
+          tar -C repo -cf \
+            "${RUNNER_TEMP}/ds9-flatpak-repo-${TARGET_ARCH}.tar" .
+
+      - name: Upload architecture repository
+        uses: actions/upload-artifact@v7
+        with:
+          name: ds9-flatpak-repo-${{ matrix.arch }}
+          path: ${{ runner.temp }}/ds9-flatpak-repo-${{ matrix.arch }}.tar
+          if-no-files-found: error
+          retention-days: 14
+
+  combine:
+    name: Combine unsigned repository
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Install repository tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes flatpak ostree
+
+      - name: Download architecture repositories
+        uses: actions/download-artifact@v8
+        with:
+          pattern: ds9-flatpak-repo-*
+          path: artifacts
+
+      - name: Combine repositories
+        run: |
+          ostree init --repo=combined-repo --mode=archive-z2
+
+          for archive in artifacts/*/ds9-flatpak-repo-*.tar; do
+            source_repo=$(mktemp -d)
+            tar -C "${source_repo}" -xf "${archive}"
+            ostree --repo=combined-repo pull-local "${source_repo}"
+          done
+
+          flatpak build-update-repo combined-repo
+
+      - name: Verify both application refs
+        run: |
+          refs=$(ostree refs --repo=combined-repo)
+          grep -qx 'app/edu.si.ds9/x86_64/master' <<<"${refs}"
+          grep -qx 'app/edu.si.ds9/aarch64/master' <<<"${refs}"
+          sort <<<"${refs}"
+
+      - name: Archive combined repository
+        run: |
+          tar -C combined-repo -cf \
+            "${RUNNER_TEMP}/ds9-flatpak-repo-unsigned.tar" .
+
+      - name: Upload combined unsigned repository
+        uses: actions/upload-artifact@v7
+        with:
+          name: ds9-flatpak-repo-unsigned
+          path: ${{ runner.temp }}/ds9-flatpak-repo-unsigned.tar
+          if-no-files-found: error
+          retention-days: 14

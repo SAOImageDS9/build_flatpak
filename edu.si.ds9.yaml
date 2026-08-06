@@ -1,0 +1,87 @@
+id: edu.si.ds9
+runtime: org.freedesktop.Platform
+runtime-version: '25.08'
+sdk: org.freedesktop.Sdk
+command: ds9
+
+finish-args:
+  # Tk uses X11, including shared-memory images.
+  - --socket=x11
+  - --share=ipc
+  # Required by SIA, SAMP, catalog, and other network services.
+  - --share=network
+  # DS9 commonly opens and writes astronomical data outside XDG folders.
+  - --filesystem=host
+  #~ - --filesystem=home
+  #~ - --filesystem=/tmp
+
+modules:
+  - name: ds9
+    buildsystem: simple
+    build-options:
+      env:
+        CFLAGS: -O2
+        CXXFLAGS: -O2
+    build-commands:
+      # DS9's top-level configure script generates the recursive Makefile.
+      - TKFLAGS=--disable-libcups ./unix/configure --with-arch=flatpak
+      # Tcl's parallel "install" target can begin packaging before tclsh
+      # exists on a clean tree, so build its binaries explicitly first.
+      - make tcl9.0/unix/Makefile
+      - make -C tcl9.0/unix -j${FLATPAK_BUILDER_N_JOBS} binaries
+      - make
+
+      # The Linux build produces a self-contained DS9 executable and the
+      # XPA command-line tools in bin/.
+      - install -Dm755 bin/ds9 ${FLATPAK_DEST}/bin/ds9
+      - |
+        for tool in xpaaccess xpaget xpainfo xpamb xpans xpaset; do
+          install -Dm755 "bin/${tool}" "${FLATPAK_DEST}/bin/${tool}"
+        done
+
+      - install -d ${FLATPAK_DEST}/share/icons/hicolor/128x128/apps
+      - gdk-pixbuf-thumbnailer -s 128 ds9/doc/sun.png ${FLATPAK_DEST}/share/icons/hicolor/128x128/apps/edu.si.ds9.png
+
+      - |
+        install -d "${FLATPAK_DEST}/share/applications"
+        printf '%s\n' \
+          '[Desktop Entry]' \
+          'Type=Application' \
+          'Name=SAOImageDS9' \
+          'GenericName=Astronomical Image Viewer' \
+          'Comment=Display and analyze astronomical images and data' \
+          'Exec=ds9 %F' \
+          'Icon=edu.si.ds9' \
+          'Terminal=false' \
+          'Categories=Education;Science;Astronomy;DataVisualization;' \
+          'MimeType=application/fits;image/fits;' \
+          'StartupWMClass=Ds9.tcl' \
+          > "${FLATPAK_DEST}/share/applications/edu.si.ds9.desktop"
+
+      - |
+        install -d "${FLATPAK_DEST}/share/metainfo"
+        printf '%s\n' \
+          '<?xml version="1.0" encoding="UTF-8"?>' \
+          '<component type="desktop-application">' \
+          '  <id>edu.si.ds9</id>' \
+          '  <metadata_license>CC0-1.0</metadata_license>' \
+          '  <project_license>GPL-3.0-only</project_license>' \
+          '  <name>SAOImageDS9</name>' \
+          '  <summary>Astronomical imaging and data visualization</summary>' \
+          '  <description>' \
+          '    <p>SAOImageDS9 displays and analyzes astronomical images, FITS binary tables, data cubes, and regions.</p>' \
+          '    <p>It supports multiple frames, mosaics, scaling and colormap algorithms, coordinate systems, catalogs, SIA, SAMP, and XPA.</p>' \
+          '  </description>' \
+          '  <launchable type="desktop-id">edu.si.ds9.desktop</launchable>' \
+          '  <provides><binary>ds9</binary></provides>' \
+          '  <url type="homepage">https://ds9.si.edu/</url>' \
+          '  <url type="bugtracker">https://github.com/SAOImageDS9/SAOImageDS9/issues</url>' \
+          '  <content_rating type="oars-1.1"/>' \
+          '  <releases><release version="8.8b2" date="2026-08-01"/></releases>' \
+          '</component>' \
+          > "${FLATPAK_DEST}/share/metainfo/edu.si.ds9.metainfo.xml"
+
+    sources:
+      - type: git
+        url: https://github.com/SAOImageDS9/SAOImageDS9.git
+        commit: c3559a18f2c41d73cbb7c756dbb6e19fd9105b75
