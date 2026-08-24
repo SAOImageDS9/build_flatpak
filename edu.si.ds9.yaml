@@ -32,7 +32,7 @@ modules:
       - make
 
       # The Linux build produces a self-contained DS9 executable and the
-      # XPA command-line tools in bin/.
+      # XPA command-line tools in  bin/.
       - install -Dm755 bin/ds9 ${FLATPAK_DEST}/bin/ds9
       - |
         for tool in xpaaccess xpaget xpainfo xpamb xpans xpaset; do
