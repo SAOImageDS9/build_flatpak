@@ -77,11 +77,11 @@ modules:
           '  <url type="homepage">https://ds9.si.edu/</url>' \
           '  <url type="bugtracker">https://github.com/SAOImageDS9/SAOImageDS9/issues</url>' \
           '  <content_rating type="oars-1.1"/>' \
-          '  <releases><release version="8.8b2" date="2026-08-24"/></releases>' \
+          '  <releases><release version="8.8b2" date="2026-08-25"/></releases>' \
           '</component>' \
           > "${FLATPAK_DEST}/share/metainfo/edu.si.ds9.metainfo.xml"
 
     sources:
       - type: git
         url: https://github.com/SAOImageDS9/SAOImageDS9.git
-        commit: 8734574ed3d06f81b797aa141a4f623685a1c820
+        commit: de3a02eeec52b08240687506d2f92d9076247a07
