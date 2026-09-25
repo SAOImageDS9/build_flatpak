@@ -84,4 +84,4 @@ modules:
     sources:
       - type: git
         url: https://github.com/SAOImageDS9/SAOImageDS9.git
-        commit: de3a02eeec52b08240687506d2f92d9076247a07
+        branch: final_branding
