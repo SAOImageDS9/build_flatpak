@@ -38,7 +38,7 @@ GPG_KEY_B64=$(base64 --wrap=0 < "$REPO/saoimageds9.gpg")
 cat > "$REPO/saoimageds9.flatpakrepo" <<EOF
 [Flatpak Repo]
 Title=SAOImageDS9
-Url=https://ds9.si.edu/beta/flatpak/
+Url=https://ds9.si.edu/download/flatpak/
 Homepage=https://ds9.si.edu/
 Comment=SAOImageDS9 Flatpak Repository
 Description=Official SAOImageDS9 Flatpak Repository
