@@ -78,7 +78,7 @@ jobs:
           name: ds9-flatpak-repo-${{ matrix.arch }}
           path: ${{ runner.temp }}/ds9-flatpak-repo-${{ matrix.arch }}.tar
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 3
 
   combine:
     name: Combine unsigned repository
@@ -128,4 +128,4 @@ jobs:
           name: ds9-flatpak-repo-unsigned
           path: ${{ runner.temp }}/ds9-flatpak-repo-unsigned.tar
           if-no-files-found: error
-          retention-days: 5
+          retention-days: 3
